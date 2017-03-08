@@ -12,7 +12,38 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Scanner;
 
-class Person implements Serializable{
+class MyArrayList<T> implements Serializable {
+
+    private T[] backingArray;
+    private int ip = 0;
+
+    public MyArrayList(){
+        backingArray = (T[]) new Object[1000];
+    }
+    public void add(T t) {
+        backingArray[ip++] = t;
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        out.writeInt(ip);
+        for (int i = 0; i < ip; i++) {
+            out.writeObject(backingArray[i]);
+        }
+    }
+
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+
+        ip = in.readInt();
+        backingArray = (T[]) new Object[ip];
+        for (int i = 0; i < ip; i++) {
+            backingArray[i] = (T) in.readObject();
+        }
+    }
+}
+
+class Person implements Serializable {
 
     int age;
     String first, last;
@@ -35,14 +66,33 @@ class Person implements Serializable{
  */
 public class Main {
 
-    public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException {
+    public static void main(String[] args) throws IOException {
+        MyArrayList<Person> list = new MyArrayList();
+
+        try (ObjectOutputStream oos = new ObjectOutputStream(
+                new BufferedOutputStream(new FileOutputStream("peopleObject.txt")))) {
+            oos.writeObject(list);
+        }
+
+    }
+
+    public static void main2(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException {
         Person p = new Person("Yaakov", "Liff");
 
-        PrintStream ps = new PrintStream("people.txt");
+        try (PrintStream ps = new PrintStream("people.txt")) {
+            ps.print(p.first + "                        \n\n\n\n\t\t\t" + p.last);
 
-        ps.print(p.first + "                        \n\n\n\n\t\t\t" + p.last);
+        } // wiil autoclose ps even if exception thrown //ps.close();
 
-        ps.close();
+        ///try with resources isa roughly equivalent to the following
+        PrintStream ps = null;
+        try {
+            ps = new PrintStream("list.obj");
+        } finally {
+            if (ps != null) {
+                ps.close();
+            }
+        }
 
         Scanner sc = new Scanner(new FileInputStream("people.txt"));
 
