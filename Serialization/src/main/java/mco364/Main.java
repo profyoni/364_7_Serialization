@@ -14,8 +14,8 @@ import java.util.Scanner;
 
 class MyArrayList<T> implements Serializable {
 
-    private T[] backingArray;
-    private int ip = 0;
+    transient  T[] backingArray; // transient only affects default Serialiaztion
+    transient int ip = 0;
 
     public MyArrayList(){
         backingArray = (T[]) new Object[1000];
@@ -23,9 +23,11 @@ class MyArrayList<T> implements Serializable {
     public void add(T t) {
         backingArray[ip++] = t;
     }
-
+    // custom serilaiztion
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
+        out.defaultWriteObject(); // Bloch, Item 75, pg 299, beyond scope of lecture
+        
         out.writeInt(ip);
         for (int i = 0; i < ip; i++) {
             out.writeObject(backingArray[i]);
@@ -35,6 +37,8 @@ class MyArrayList<T> implements Serializable {
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
 
+        in.defaultReadObject();
+        
         ip = in.readInt();
         backingArray = (T[]) new Object[ip];
         for (int i = 0; i < ip; i++) {
@@ -43,22 +47,7 @@ class MyArrayList<T> implements Serializable {
     }
 }
 
-class Person implements Serializable {
 
-    int age;
-    String first, last;
-
-    @Override
-    public String toString() {
-        return "Person{" + "first=" + first + ", last=" + last + '}';
-    }
-
-    public Person(String first, String last) {
-        this.first = first;
-        this.last = last;
-    }
-
-}
 
 /**
  *
@@ -66,13 +55,26 @@ class Person implements Serializable {
  */
 public class Main {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
         MyArrayList<Person> list = new MyArrayList();
+        list.add(new Person("Shmuel","Morris"));
 
         try (ObjectOutputStream oos = new ObjectOutputStream(
                 new BufferedOutputStream(new FileOutputStream("peopleObject.txt")))) {
             oos.writeObject(list);
         }
+        
+        
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new BufferedInputStream(new FileInputStream("peopleObject.txt")))) {
+            list = (MyArrayList<Person>) ois.readObject();
+        }
+        
+        for (int i=0;i<list.ip;i++)
+        {
+            System.out.println( list.backingArray[i].first);
+        }
+
 
     }
 
